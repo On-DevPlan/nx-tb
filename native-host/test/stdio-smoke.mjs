@@ -1,7 +1,9 @@
 // Go host stdio 协议测试:一次 spawn,连发 3 条消息,验证常驻语义
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
-const EXE = 'D:/code/a_js/nx-tb/native-host/tabboard-host.exe';
+const EXE = join(dirname(fileURLToPath(import.meta.url)), '..', 'tabboard-host.exe');
 const child = spawn(EXE, [], {
   stdio: ['pipe', 'pipe', 'inherit'],
   env: { ...process.env, TABBOARD_DIR: 'D:/tmp/gohost-test', TABBOARD_LAKE_DIR: 'D:/tmp/gohost-test/lake' },

@@ -59,20 +59,9 @@ jobs:
 
       - name: Smoke (JS resolver)
         shell: bash
-        run: |
-          NX_TB_HOST_BINARY="$(pwd)/native-host/tabboard-host.exe" node -e "
-            const p = require('./src/modules/tb/service.js');
-          " 2>/dev/null || true
-          NX_TB_HOST_BINARY="$(pwd)/native-host/tabboard-host.exe" node -e "
-            import('./src/modules/tb/service.js').then(m => {
-              const bin = m.hostBinaryPath();
-              console.log('resolved:', bin);
-              const { execSync } = require('child_process');
-              const out = execSync('\"' + bin + '\" --json version', { encoding: 'utf8' });
-              if (!JSON.parse(out).data?.version) throw new Error('not responsive');
-              console.log('JS resolver smoke OK');
-            });
-          "
+        env:
+          NX_TB_HOST_BINARY: ${{ github.workspace }}\native-host\tabboard-host.exe
+        run: node native-host/test/resolver-smoke.mjs
 
       - name: 二进制 commit 回仓库
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
