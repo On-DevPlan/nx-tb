@@ -26,3 +26,6 @@ src/web/public/
 
 # Playwright MCP 调试产物（浏览器自动化临时日志/快照）
 .playwright-mcp/
+
+# CI 构建产物 —— 只进 npm tarball，不进 git
+binaries/

@@ -1,13 +1,13 @@
 name: Publish to npm
 
-# A06 顺序化：挂在 build-host 完成之后。
-# 如果直接 push 触发，publish 读到的是仓库里的**旧**二进制 ——
-# 新二进制要等 build-host 跑完 commit 才存在（且 GITHUB_TOKEN 的 push
-# 不会触发下游 workflow，所以必须用 workflow_run 显式衔接）。
+# 单 workflow 内联构建:Go 编译 → 冒烟 → Node 侧测试 → npm publish。
+#
+# 为什么不用 A06 的「build + workflow_run 顺序化」两段式:
+#   那套拆分的前提是**二进制 commit 回 git**(publish 侧 checkout 才有产物)。
+#   二进制不该进 git(膨胀 + 每次构建一个 commit),于是 publish 侧**自己构建**——
+#   既然自己构建,就不存在「读到旧二进制」的竞态,拆分失去意义。
 on:
-  workflow_run:
-    workflows: [Build native host]
-    types: [completed]
+  push:
     branches: [main]
 
 permissions:
@@ -16,18 +16,51 @@ permissions:
 
 jobs:
   publish:
-    if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main'
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # tag 检测要完整历史
-          # 必须显式 checkout 触发 run 的 sha —— workflow_run 默认 checkout
-          # 当前 main HEAD，可能已经跑到触发 commit 之后
-          ref: ${{ github.event.workflow_run.head_sha }}
 
+      # ---- Go native host:编译 + 冒烟(产物只进 tarball,不进 git)----
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: 版本一致性检查
+        working-directory: native-host
+        shell: bash
+        run: |
+          PKG_V=$(node -p "require('../package.json').version")
+          GO_V=$(grep -oP 'Version\s*=\s*"\K[^"]+' internal/commands/commands.go)
+          echo "package.json=$PKG_V / go=$GO_V"
+          [ "$PKG_V" = "$GO_V" ] || { echo "::error::版本号不一致（package.json vs commands.go）"; exit 1; }
+
+      - name: Go build → binaries/win32-x64/
+        working-directory: native-host
+        shell: bash
+        run: |
+          mkdir -p ../binaries/win32-x64
+          go build -ldflags="-s -w" -trimpath -o ../binaries/win32-x64/tabboard-host.exe .
+          ls -la ../binaries/win32-x64/
+
+      - name: Smoke (二进制 CLI)
+        working-directory: native-host
+        shell: bash
+        run: ../binaries/win32-x64/tabboard-host.exe version
+
+      - name: Smoke (stdio 协议)
+        working-directory: native-host
+        shell: bash
+        run: node test/stdio-smoke.mjs
+
+      - name: Smoke (JS resolver)
+        shell: bash
+        env:
+          NX_TB_HOST_BINARY: ${{ github.workspace }}\binaries\win32-x64\tabboard-host.exe
+        run: node native-host/test/resolver-smoke.mjs
+
+      # ---- Node 侧:构建 + 测试 ----
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -41,6 +74,7 @@ jobs:
 
       - name: 读版本号
         id: pkg
+        shell: bash
         run: |
           echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
           echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
@@ -48,6 +82,7 @@ jobs:
 
       - name: 已存在则跳过（幂等）
         id: check
+        shell: bash
         run: |
           if git rev-parse "${{ steps.pkg.outputs.tag }}" >/dev/null 2>&1; then
             echo "tag_exists=true" >> $GITHUB_OUTPUT
@@ -64,11 +99,19 @@ jobs:
 
       - name: 打 tag
         if: steps.check.outputs.tag_exists == 'false'
+        shell: bash
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ steps.pkg.outputs.tag }}" -m "Release ${{ steps.pkg.outputs.tag }}"
           git push origin "${{ steps.pkg.outputs.tag }}"
+
+      - name: 确认二进制在包内
+        shell: bash
+        run: |
+          npm pack --dry-run 2>&1 | grep -q "binaries/win32-x64/tabboard-host.exe" \
+            || { echo "::error::tarball 里没有 native host 二进制"; exit 1; }
+          echo "二进制已在 tarball 中"
 
       - name: 发布
         if: steps.check.outputs.published == 'false'

@@ -1,0 +1,57 @@
+name: Host PR check
+
+# 仅 PR 校验:Go 编译 + 三层冒烟。产物不落仓库、不发布。
+# push 到 main 的构建 + 发布在 npm-publish.yml 里一体完成。
+on:
+  pull_request:
+    paths:
+      - 'native-host/**'
+      - 'src/modules/tb/**'
+      - 'package.json'
+      - '.github/workflows/ci-host.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: 版本一致性检查
+        working-directory: native-host
+        shell: bash
+        run: |
+          PKG_V=$(node -p "require('../package.json').version")
+          GO_V=$(grep -oP 'Version\s*=\s*"\K[^"]+' internal/commands/commands.go)
+          echo "package.json=$PKG_V / go=$GO_V"
+          [ "$PKG_V" = "$GO_V" ] || { echo "::error::版本号不一致（package.json vs commands.go）"; exit 1; }
+
+      - name: Go build
+        working-directory: native-host
+        shell: bash
+        run: go build -ldflags="-s -w" -trimpath -o tabboard-host.exe .
+
+      - name: Smoke (二进制 CLI)
+        working-directory: native-host
+        shell: bash
+        run: |
+          ./tabboard-host.exe version
+          ./tabboard-host.exe --help
+
+      - name: Smoke (stdio 协议)
+        working-directory: native-host
+        shell: bash
+        run: node test/stdio-smoke.mjs
+
+      - name: Smoke (JS resolver)
+        shell: bash
+        env:
+          NX_TB_HOST_BINARY: ${{ github.workspace }}\native-host\tabboard-host.exe
+        run: node native-host/test/resolver-smoke.mjs

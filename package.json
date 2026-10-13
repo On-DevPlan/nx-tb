@@ -1,6 +1,6 @@
 {
   "name": "nx-tb",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "本机工具：CLI 与 Web 面板同源",
   "type": "module",
   "bin": {
@@ -36,7 +36,8 @@
     "test": "pnpm run lint && pnpm run build && pnpm run test:smoke && pnpm run test:unit",
     "test:smoke": "node tests/smoke.mjs",
     "test:unit": "node --test tests/unit/*.test.mjs",
-    "logo": "node tools/logo-gen/cli.mjs"
+    "logo": "node tools/logo-gen/cli.mjs",
+    "build:host": "cd native-host && go build -ldflags=\"-s -w\" -trimpath -o ../binaries/win32-x64/tabboard-host.exe ."
   },
   "packageManager": "pnpm@10.33.0",
   "repository": {
