@@ -29,13 +29,14 @@ child.stdout.on('data', (d) => {
 });
 
 send({ command: 'version' });
-setTimeout(() => send({ command: 'list', kind: 'groups' }), 200);
-setTimeout(() => send({ command: 'doctor' }), 400);
+setTimeout(() => send({ command: 'list', kind: 'groups' }), 300);
+setTimeout(() => send({ command: 'doctor' }), 600);
 
+// doctor 要跑 PowerShell 查注册表(CI runner 上冷启动 ~1.5s),窗口给足
 setTimeout(() => {
   console.log('响应数:', responses.length, '(期望 3)');
   for (const r of responses) console.log(' -', r.status, JSON.stringify(r.data ?? {}).slice(0, 70));
   console.log('常驻语义(进程存活):', child.exitCode === null ? 'YES' : 'NO');
   child.kill();
   process.exit(responses.length === 3 && child.exitCode === null ? 0 : 1);
-}, 1000);
+}, 6000);
