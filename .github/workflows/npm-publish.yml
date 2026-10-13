@@ -1,7 +1,13 @@
 name: Publish to npm
 
+# A06 顺序化：挂在 build-host 完成之后。
+# 如果直接 push 触发，publish 读到的是仓库里的**旧**二进制 ——
+# 新二进制要等 build-host 跑完 commit 才存在（且 GITHUB_TOKEN 的 push
+# 不会触发下游 workflow，所以必须用 workflow_run 显式衔接）。
 on:
-  push:
+  workflow_run:
+    workflows: [Build native host]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -10,17 +16,22 @@ permissions:
 
 jobs:
   publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0          # tag 检测要完整历史
+          # 必须显式 checkout 触发 run 的 sha —— workflow_run 默认 checkout
+          # 当前 main HEAD，可能已经跑到触发 commit 之后
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 

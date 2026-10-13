@@ -1,6 +1,6 @@
 {
   "name": "nx-tb",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "本机工具：CLI 与 Web 面板同源",
   "type": "module",
   "bin": {
@@ -14,8 +14,15 @@
     "bin",
     "src",
     "assets",
+    "binaries",
     "README.md",
     "CHANGELOG.md"
+  ],
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
   ],
   "scripts": {
     "build": "vite build",

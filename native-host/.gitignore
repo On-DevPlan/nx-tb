@@ -1,0 +1,3 @@
+# Go 本地构建产物（分发位在仓库根的 binaries/<platform>-<arch>/）
+tabboard-host.exe
+tabboard-host
