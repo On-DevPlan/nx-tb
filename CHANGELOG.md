@@ -2,6 +2,13 @@
 
 所有 notable 变更记录在此文件。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [0.2.2] - 2026-10-13
+
+### Added
+- `nx-tb init` 成为 `nx-tb tb init` 的别名（注册 native host 少打两个字）
+
+[0.2.2]: https://github.com/On-DevPlan/nx-tb/releases/tag/v0.2.2
+
 ## [0.2.0] - 2026-10-13
 
 ### Added

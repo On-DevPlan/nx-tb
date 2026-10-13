@@ -11,7 +11,8 @@ export default {
   actions: [
     {
       id: 'tb.init',
-      cli: ['tb', 'init'],
+      // 别名：nx-tb init ≡ nx-tb tb init（注册就是 tb 功能的总入口，值得少打两个字）
+      cli: [['tb', 'init'], ['init']],
       http: ['POST', '/api/tb/init'],
       summary: '注册 native host 到 Chrome/Edge（首次使用跑一次）',
       flags: { 'skip-registry': { type: 'boolean' } },
