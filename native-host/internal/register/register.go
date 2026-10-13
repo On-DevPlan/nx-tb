@@ -76,12 +76,14 @@ func UnregisterHost() (bool, []string) {
 }
 
 // IsRegistered 查询注册状态(Chrome + Edge)。
+// 用 reg.exe 而非 PowerShell:查询是高频路径(doctor),reg.exe 冷启动 ~50ms,
+// PowerShell 要 ~800ms —— CI runner 上直接决定 doctor 会不会超时。
 func IsRegistered() (bool, []string) {
 	present := []string{}
 	for _, b := range browserKeys {
-		regKey := `HKCU:\` + b.Path + `\` + HostName
-		script := fmt.Sprintf(`if (Test-Path -LiteralPath '%s') { exit 0 } else { exit 1 }`, regKey)
-		if ok, _ := runPowerShell(script); ok {
+		keyPath := `HKCU\` + b.Path + `\` + HostName
+		cmd := exec.Command("reg.exe", "query", keyPath)
+		if err := cmd.Run(); err == nil {
 			present = append(present, b.Vendor)
 		}
 	}
