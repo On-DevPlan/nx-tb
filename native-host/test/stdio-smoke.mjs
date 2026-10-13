@@ -1,9 +1,10 @@
-// Go host stdio 协议测试:一次 spawn,连发 3 条消息,验证常驻语义
+// Go host stdio 协议测试:一次 spawn,连发 3 条消息,验证常驻语义。
+// 二进制位置走与生产同一套 fallback 链(hostBinaryPath),
+// 避免本地 go build / CI 构建到不同目录时测试找不到文件。
 import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import { hostBinaryPath } from '../../src/modules/tb/service.js';
 
-const EXE = join(dirname(fileURLToPath(import.meta.url)), '..', 'tabboard-host.exe');
+const EXE = hostBinaryPath();
 const child = spawn(EXE, [], {
   stdio: ['pipe', 'pipe', 'inherit'],
   env: { ...process.env, TABBOARD_DIR: 'D:/tmp/gohost-test', TABBOARD_LAKE_DIR: 'D:/tmp/gohost-test/lake' },
