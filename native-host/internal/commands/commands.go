@@ -18,7 +18,7 @@ import (
 const (
 	// ExtensionID 来自扩展 manifest 的 key 字段(稳定 ID)
 	ExtensionID = "6orv4jipupwr3nk75hnq2bosj63rwlus"
-	Version     = "0.2.2"
+	Version     = "0.2.3"
 )
 
 // ---- 通用 helpers ----
