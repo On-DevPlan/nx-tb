@@ -176,6 +176,21 @@ export async function installOne(name, opts = {}) {
         replaced: dstExisted,
     };
 }
+// 一键装**全部**（--all）：范围取目录扫描（bundledSkillNames 已过滤出含 SKILL.md 的目录），
+// 不依赖 groups.json——组表只是别名，新加 skill 忘了登记也装得上。
+// force 恒开：--all 的语义就是「装全 + 对齐到包内版本」，不再走冲突预检；
+// 想保留目标目录里的本地改动就别用 --all。
+export async function installAll(opts = {}) {
+    const names = await bundledSkillNames();
+    if (!names.length) {
+        throw notFound('包里没有可分发的 skill（assets/ 下没有含 SKILL.md 的目录）');
+    }
+    const results = [];
+    for (const n of names) {
+        results.push({ skill: n, ...(await installOne(n, { ...opts, force: true })) });
+    }
+    return { status: 'ok', all: true, count: results.length, skills: results };
+}
 // 一键装一组。任一冲突 → 整体 conflict 且不落任何文件（让用户决策后 --force 整组重来）。
 export async function installGroup(group, opts = {}) {
     const key = String(group || '').trim();

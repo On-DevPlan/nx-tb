@@ -2,6 +2,14 @@
 
 所有 notable 变更记录在此文件。格式基于 [Keep a Changelog](https://keepachangelog.com/)。
 
+## [0.2.4] - 2026-11-05
+
+### Added
+
+- **`skill install --all`：一次装齐包内全部 skill，且直接覆盖**。范围由 `assets/`
+  目录扫描决定（`groups.json` 只是别名）；覆盖隐式生效，不需要再补 `--force`。
+  与 `name` / `--group` 互斥。
+
 ## [0.2.3] - 2026-10-20
 
 ### Changed

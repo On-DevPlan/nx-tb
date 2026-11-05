@@ -93,22 +93,36 @@ export default {
       id: 'skill.install',
       cli: ['skill', 'install'],
       http: ['POST', '/api/skill-install'],
-      summary: '安装 skill 或整组 skill',
+      summary: '安装 skill、整组 skill 或全部 skill（--all 直接覆盖）',
       args: [{ name: 'name', required: false }],
       flags: {
         group: { type: 'string' },
         to: { type: 'string' },
         force: { type: 'boolean' },
+        all: { type: 'boolean', hint: '装 assets/ 下全部 skill（隐式覆盖，不需要 --force）' },
       },
       run: async (ctx) => {
         const opts = { to: ctx.to, force: ctx.force };
         if (ctx.name && ctx.group) {
           throw badInput('位置参数 name 与 --group 互斥，只能给一个');
         }
+        if (ctx.all) {
+          if (ctx.name || ctx.group) {
+            throw badInput('--all 与 name / --group 互斥，它会安装全部 skill');
+          }
+          return skills.installAll(opts);
+        }
         if (ctx.group) return skills.installGroup(ctx.group, opts);
         return skills.installOne(ctx.name || 'nx-tb', opts);
       },
       render: (r) => {
+        // --all：装齐全部（显式字段判别，先于 group 分支）
+        if (r.all) {
+          return (
+            `全部 ${r.count} 个 skill 已安装（直接覆盖）:\n` +
+            r.skills.map((x) => `  ${x.status === 'skipped' ? '已是最新' : '已安装'}: ${x.path}`).join('\n')
+          );
+        }
         if ('group' in r && Array.isArray(r.skills)) {
           const g = r;
           if (g.status === 'conflict') {
